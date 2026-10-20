@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard ejecutivo | Concreto permeable</title>
+  <script src="https://cdn.plot.ly/plotly-3.1.0.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --navy: #14213d;
+      --blue: #247ba0;
+      --bg: #f3f6fa;
+      --muted: #637083;
+      --line: #e5eaf0;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #1d2939; font: 15px/1.5 Arial, sans-serif; }
+    header { background: linear-gradient(120deg, #14213d, #247ba0); color: #fff; padding: 32px max(22px, calc((100% - 1240px) / 2)); }
+    header h1 { margin: 0 0 8px; font-size: clamp(25px, 4vw, 38px); }
+    header p { margin: 0; color: #e1eaf2; }
+    main { max-width: 1240px; margin: 24px auto; padding: 0 20px 36px; }
+    .upload-box { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px; box-shadow: 0 4px 16px #1831530b; }
+    .upload-box label { display: inline-block; background: var(--blue); color: white; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+    .upload-box input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+    .upload-box label:focus-within, .upload-box label:hover { background: #185b78; }
+    #file-name, #status { color: var(--muted); font-size: 13px; }
+    #status { min-height: 22px; margin: 12px 2px 0; }
+    #status.error { color: #b42318; }
+    #status.success { color: #067647; }
+    .section-title { color: var(--navy); margin: 30px 0 14px; font-size: 21px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(195px, 1fr)); gap: 14px; }
+    .card, .panel { background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 4px 16px #1831530b; }
+    .card { padding: 18px; }
+    .card-label { color: var(--muted); font-size: 13px; }
+    .card-value { color: var(--navy); font-size: 26px; font-weight: 700; margin: 7px 0 2px; overflow-wrap: anywhere; }
+    .card-note, .note { color: var(--muted); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .panel { padding: 12px; min-width: 0; }
+    .chart { width: 100%; min-height: 330px; }
+    .wide { grid-column: 1 / -1; }
+    .empty { display: grid; min-height: 310px; place-items: center; color: #8390a2; text-align: center; padding: 22px; }
+    .hidden { display: none; }
+    .note { line-height: 1.7; margin: 12px 2px; }
+    footer { border-top: 1px solid #e0e6ed; color: var(--muted); font-size: 12px; padding: 18px 0 4px; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .wide { grid-column: auto; } header { padding: 26px 20px; } .chart { min-height: 290px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Concreto permeable | Resumen ejecutivo</h1>
+    <p>Indicadores de calidad, comportamiento de mezclas y estimacion de resistencia.</p>
+  </header>
+  <main>
+    <section aria-label="Carga de archivo CSV">
+      <div class="upload-box">
+        <label for="csv-file">Seleccionar archivo CSV</label>
+        <input id="csv-file" type="file" accept=".csv,text/csv">
+        <span id="file-name">No se ha seleccionado ningun archivo.</span>
+      </div>
+      <div id="status" role="status" aria-live="polite">Carga un CSV con los encabezados del dataset de concreto permeable.</div>
+    </section>
+
+    <div id="dashboard" class="hidden">
+      <section id="resumen">
+        <h2 class="section-title">Indicadores clave</h2>
+        <div class="cards" id="kpis"></div>
+        <p class="note" id="cleaning-summary"></p>
+      </section>
+
+      <section id="analisis">
+        <h2 class="section-title">Distribucion y estadistica</h2>
+        <div class="grid">
+          <article class="panel"><div class="chart" id="distribution"></div></article>
+          <article class="panel"><div class="chart" id="statistics"></div></article>
+          <article class="panel wide"><div class="chart" id="time-series"></div></article>
+        </div>
+      </section>
+
+      <section id="relationships">
+        <h2 class="section-title">Relaciones entre variables</h2>
+        <div class="grid">
+          <article class="panel"><div class="chart" id="dispersion"></div></article>
+          <article class="panel"><div class="chart" id="correlation"></div></article>
+          <article class="panel wide"><div class="chart" id="chart-3d"></div></article>
+        </div>
+      </section>
+
+      <section id="model">
+        <h2 class="section-title">Modelo predictivo</h2>
+        <div class="cards" id="model-kpis"></div>
+        <p class="note">Modelo de regresion lineal multiple, evaluado con una particion de prueba reproducible. La estimacion de la mezcla promedio es ilustrativa y no sustituye ensayos de laboratorio.</p>
+        <div class="grid"><article class="panel wide"><div class="chart" id="model-chart"></div></article></div>
+      </section>
+      <footer id="source-summary"></footer>
+    </div>
+  </main>
+
+  <script>
+    "use strict";
+
+    const AGE = "Age (Day)";
+    const CEMENT = "Cement KG/M3 (component 1)";
+    const STRENGTH = "Compressive Strength (Kg/m2)";
+    const MODEL_INPUTS = [
+      "Cement KG/M3 (component 1)",
+      "Coarse Aggregate KG/M3 (component 2)",
+      "Fine Aggregate KG/M3 (component 3)",
+      "Water KG/M3 (component 4)",
+      "Superplasticizer KG/M3 (component 5)",
+      "% Voids"
+    ];
+    const REQUIRED = [AGE, CEMENT, STRENGTH, ...MODEL_INPUTS];
+    const PLOT_CONFIG = { responsive: true, displaylogo: false };
+    const numberFormat = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 });
+
+    const fileInput = document.getElementById("csv-file");
+    const dashboard = document.getElementById("dashboard");
+    const status = document.getElementById("status");
+
+    function setStatus(message, kind) {
+      status.textContent = message;
+      status.className = kind || "";
+    }
+
+    function parseCsv(text) {
+      const source = text.replace(/^\uFEFF/, "");
+      const firstLine = source.split(/\r\n|\n|\r/, 1)[0] || "";
+      const delimiters = [",", ";", "\t"];
+      const delimiter = delimiters.reduce((best, candidate) =>
+        (firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best), ",");
+      const rows = [];
+      let row = [];
+      let field = "";
+      let quoted = false;
+
+      for (let i = 0; i < source.length; i += 1) {
+        const char = source[i];
+        if (quoted) {
+          if (char === '"' && source[i + 1] === '"') {
+            field += '"';
+            i += 1;
+          } else if (char === '"') {
+            quoted = false;
+          } else {
+            field += char;
+          }
+        } else if (char === '"' && field.length === 0) {
+          quoted = true;
+        } else if (char === delimiter) {
+          row.push(field);
+          field = "";
+        } else if (char === "\n" || char === "\r") {
+          if (char === "\r" && source[i + 1] === "\n") i += 1;
+          row.push(field);
+          if (row.some(value => value.trim() !== "")) rows.push(row);
+          row = [];
+          field = "";
+        } else {
+          field += char;
+        }
+      }
+      row.push(field);
+      if (row.some(value => value.trim() !== "")) rows.push(row);
+      if (quoted) throw new Error("El CSV contiene un campo entre comillas que no se cerro.");
+      if (rows.length < 2) throw new Error("El archivo no contiene filas de datos.");
+
+      const headers = rows[0].map((header, index) =>
+        (index === 0 ? header.replace(/^\uFEFF/, "") : header).trim());
+      if (headers.some(header => !header)) throw new Error("Hay encabezados vacios en el CSV.");
+      if (new Set(headers).size !== headers.length) throw new Error("El CSV contiene encabezados repetidos.");
+      const records = rows.slice(1).map(values => {
+        const record = {};
+        headers.forEach((header, index) => { record[header] = (values[index] || "").trim(); });
+        return record;
+      });
+      return { headers, records };
+    }
+
+    function toNumber(value) {
+      if (value === null || value === undefined || String(value).trim() === "") return null;
+      let normalized = String(value).trim().replace(/\s/g, "");
+      if (normalized.includes(",") && !normalized.includes(".")) normalized = normalized.replace(",", ".");
+      else normalized = normalized.replace(/,/g, "");
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    function mean(values) {
+      return values.length ? values.reduce((total, value) => total + value, 0) / values.length : null;
+    }
+
+    function format(value) {
+      return value === null || !Number.isFinite(value) ? "No disponible" : numberFormat.format(value);
+    }
+
+    function makeCard(label, value, note) {
+      const card = document.createElement("article");
+      card.className = "card";
+      const labelElement = document.createElement("div");
+      labelElement.className = "card-label";
+      labelElement.textContent = label;
+      const valueElement = document.createElement("div");
+      valueElement.className = "card-value";
+      valueElement.textContent = value;
+      const noteElement = document.createElement("div");
+      noteElement.className = "card-note";
+      noteElement.textContent = note;
+      card.append(labelElement, valueElement, noteElement);
+      return card;
+    }
+
+    function showEmptyChart(id, message) {
+      const element = document.getElementById(id);
+      if (element.data) Plotly.purge(element);
+      element.replaceChildren();
+      const messageElement = document.createElement("div");
+      messageElement.className = "empty";
+      messageElement.textContent = message;
+      element.append(messageElement);
+    }
+
+    function draw(id, data, layout) {
+      Plotly.react(id, data, {
+        autosize: true,
+        paper_bgcolor: "#fff",
+        plot_bgcolor: "#f3f6fa",
+        font: { family: "Arial, sans-serif", color: "#344054" },
+        margin: { l: 60, r: 25, t: 62, b: 55 },
+        ...layout
+      }, PLOT_CONFIG);
+    }
+
+    function correlation(a, b) {
+      const avgA = mean(a);
+      const avgB = mean(b);
+      let numerator = 0;
+      let squaredA = 0;
+      let squaredB = 0;
+      for (let i = 0; i < a.length; i += 1) {
+        const deltaA = a[i] - avgA;
+        const deltaB = b[i] - avgB;
+        numerator += deltaA * deltaB;
+        squaredA += deltaA * deltaA;
+        squaredB += deltaB * deltaB;
+      }
+      return squaredA && squaredB ? numerator / Math.sqrt(squaredA * squaredB) : null;
+    }
+
+    function fitLinearModel(x, y) {
+      const columns = x[0].length + 1;
+      const matrix = Array.from({ length: columns }, () => Array(columns + 1).fill(0));
+      for (let row = 0; row < x.length; row += 1) {
+        const values = [1, ...x[row]];
+        for (let i = 0; i < columns; i += 1) {
+          for (let j = 0; j < columns; j += 1) matrix[i][j] += values[i] * values[j];
+          matrix[i][columns] += values[i] * y[row];
+        }
+      }
+      const scale = Math.max(1, ...matrix.slice(0, columns).map((line, index) => Math.abs(line[index])));
+      for (let i = 1; i < columns; i += 1) matrix[i][i] += scale * 1e-10;
+
+      for (let pivot = 0; pivot < columns; pivot += 1) {
+        let best = pivot;
+        for (let row = pivot + 1; row < columns; row += 1) {
+          if (Math.abs(matrix[row][pivot]) > Math.abs(matrix[best][pivot])) best = row;
+        }
+        [matrix[pivot], matrix[best]] = [matrix[best], matrix[pivot]];
+        if (Math.abs(matrix[pivot][pivot]) < 1e-14) throw new Error("No se pudo ajustar el modelo con estas columnas.");
+        const divisor = matrix[pivot][pivot];
+        for (let col = pivot; col <= columns; col += 1) matrix[pivot][col] /= divisor;
+        for (let row = 0; row < columns; row += 1) {
+          if (row === pivot) continue;
+          const factor = matrix[row][pivot];
+          for (let col = pivot; col <= columns; col += 1) matrix[row][col] -= factor * matrix[pivot][col];
+        }
+      }
+      return matrix.map(row => row[columns]);
+    }
+
+    function predict(x, coefficients) {
+      return x.map(row => coefficients[0] + row.reduce((sum, value, index) => sum + value * coefficients[index + 1], 0));
+    }
+
+    function seededShuffle(length) {
+      const indices = Array.from({ length }, (_, index) => index);
+      let seed = 42;
+      for (let i = indices.length - 1; i > 0; i -= 1) {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        const j = seed % (i + 1);
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      return indices;
+    }
+
+    function renderModel(records) {
+      const rows = records.map(record => {
+        const inputs = MODEL_INPUTS.map(column => toNumber(record[column]));
+        const target = toNumber(record[STRENGTH]);
+        return inputs.every(value => value !== null) && target !== null ? { inputs, target } : null;
+      }).filter(Boolean);
+
+      if (rows.length < 5) {
+        document.getElementById("model-kpis").replaceChildren(
+          makeCard("Modelo predictivo", "No disponible", "Se requieren al menos 5 mezclas completas.")
+        );
+        showEmptyChart("model-chart", "No hay suficientes filas completas para evaluar el modelo.");
+        return;
+      }
+
+      const order = seededShuffle(rows.length);
+      const testCount = Math.min(Math.max(1, Math.ceil(rows.length * 0.2)), rows.length - 2);
+      const testIndices = order.slice(0, testCount);
+      const trainIndices = order.slice(testCount);
+      const xTrain = trainIndices.map(index => rows[index].inputs);
+      const yTrain = trainIndices.map(index => rows[index].target);
+      const xTest = testIndices.map(index => rows[index].inputs);
+      const yTest = testIndices.map(index => rows[index].target);
+      const testPredictions = predict(xTest, fitLinearModel(xTrain, yTrain));
+      const mae = mean(yTest.map((value, index) => Math.abs(value - testPredictions[index])));
+      const averageInputs = MODEL_INPUTS.map((_, column) => mean(rows.map(row => row.inputs[column])));
+      const averagePrediction = predict([averageInputs], fitLinearModel(rows.map(row => row.inputs), rows.map(row => row.target)))[0];
+      const targetAverage = mean(yTest);
+      const totalSquares = yTest.reduce((sum, value) => sum + (value - targetAverage) ** 2, 0);
+      const residualSquares = yTest.reduce((sum, value, index) => sum + (value - testPredictions[index]) ** 2, 0);
+      const r2 = yTest.length >= 2 && totalSquares > 0 ? 1 - residualSquares / totalSquares : null;
+
+      document.getElementById("model-kpis").replaceChildren(
+        makeCard("Error absoluto medio (MAE)", format(mae), "Kg/m² en filas de prueba"),
+        makeCard("R² en prueba", format(r2), `Mezclas completas: ${numberFormat.format(rows.length)}`),
+        makeCard("Estimacion de mezcla promedio", format(averagePrediction), "Kg/m²; regresion lineal multiple")
+      );
+      const allValues = yTest.concat(testPredictions);
+      const minValue = allValues.reduce((minimum, value) => Math.min(minimum, value), Infinity);
+      const maxValue = allValues.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
+      draw("model-chart", [
+        { x: yTest, y: testPredictions, type: "scatter", mode: "markers", name: "Predicciones", marker: { color: "#247ba0", size: 10, opacity: 0.8 } },
+        { x: [minValue, maxValue], y: [minValue, maxValue], type: "scatter", mode: "lines", name: "Referencia ideal", line: { color: "#f25f5c", dash: "dash" } }
+      ], { title: "Modelo: valores reales frente a estimados (prueba)", xaxis: { title: "Real (Kg/m²)" }, yaxis: { title: "Estimado (Kg/m²)" } });
+    }
+
+    function renderDashboard(headers, records, fileName, originalCount, duplicateCount) {
+      const missing = REQUIRED.filter(column => !headers.includes(column));
+      if (missing.length) {
+        throw new Error(`Faltan estas columnas requeridas: ${missing.join(", ")}`);
+      }
+      const cleaned = [];
+      const seen = new Set();
+      records.forEach(record => {
+        const key = JSON.stringify(headers.map(header => record[header] || ""));
+        if (!seen.has(key)) {
+          seen.add(key);
+          cleaned.push(record);
+        }
+      });
+      const numericRecords = cleaned.map(record => {
+        const numbers = {};
+        headers.forEach(header => { numbers[header] = toNumber(record[header]); });
+        return numbers;
+      });
+      const strengthValues = numericRecords.map(record => record[STRENGTH]).filter(value => value !== null);
+      const ageValues = numericRecords.map(record => record[AGE]).filter(value => value !== null);
+      const averageStrength = mean(strengthValues);
+      if (!strengthValues.length || !ageValues.length) {
+        throw new Error("No hay valores numericos validos en las columnas de edad o resistencia.");
+      }
+
+      document.getElementById("kpis").replaceChildren(
+        makeCard("Registros analizados", numberFormat.format(cleaned.length), "Filas despues de eliminar duplicados"),
+        makeCard("Resistencia promedio", format(averageStrength), "Kg/m²"),
+        makeCard("Resistencia maxima", format(strengthValues.reduce((maximum, value) => Math.max(maximum, value), -Infinity)), "Kg/m²"),
+        makeCard("Edad promedio", format(mean(ageValues)), "Dias de ensayo")
+      );
+      const missingByColumn = REQUIRED.map(column => {
+        const missingCount = numericRecords.filter(record => record[column] === null).length;
+        return `${column}: ${missingCount}`;
+      });
+      document.getElementById("cleaning-summary").textContent =
+        `Limpieza: ${numberFormat.format(originalCount)} filas leidas; ${numberFormat.format(duplicateCount)} duplicados eliminados; ${numberFormat.format(cleaned.length)} filas unicas. Resistencia minima: ${format(strengthValues.reduce((minimum, value) => Math.min(minimum, value), Infinity))} Kg/m². Valores ausentes/no numericos por campo requerido — ${missingByColumn.join(" · ")}.`;
+
+      const strengths = numericRecords.map(record => record[STRENGTH]).filter(value => value !== null);
+      draw("distribution", [{ x: strengths, type: "histogram", nbinsx: 30, marker: { color: "#247ba0" }, name: "Muestras" }], {
+        title: "Distribucion de la resistencia",
+        xaxis: { title: "Resistencia (Kg/m²)" },
+        yaxis: { title: "Cantidad de muestras" }
+      });
+
+      const ageGroups = new Map();
+      numericRecords.forEach(record => {
+        const age = record[AGE];
+        const value = record[STRENGTH];
+        if (age !== null && value !== null) {
+          if (!ageGroups.has(age)) ageGroups.set(age, []);
+          ageGroups.get(age).push(value);
+        }
+      });
+      const sortedAges = [...ageGroups.keys()].sort((a, b) => a - b);
+      if (sortedAges.length) {
+        draw("statistics", [{
+          x: sortedAges.flatMap(age => Array(ageGroups.get(age).length).fill(age)),
+          y: sortedAges.flatMap(age => ageGroups.get(age)),
+          type: "box",
+          boxpoints: "outliers",
+          marker: { color: "#70c1b3" },
+          name: "Resistencia"
+        }], {
+          title: "Variabilidad de resistencia por edad",
+          xaxis: { title: "Edad (dias)", type: "category", categoryorder: "array", categoryarray: sortedAges.map(String) },
+          yaxis: { title: "Resistencia (Kg/m²)" }
+        });
+        draw("time-series", [{
+          x: sortedAges,
+          y: sortedAges.map(age => mean(ageGroups.get(age))),
+          type: "scatter",
+          mode: "lines+markers",
+          line: { color: "#247ba0", width: 3 },
+          name: "Promedio"
+        }], {
+          title: "Resistencia promedio segun edad de ensayo",
+          xaxis: { title: "Edad del concreto (dias)" },
+          yaxis: { title: "Resistencia promedio (Kg/m²)" }
+        });
+      } else {
+        showEmptyChart("statistics", "No hay suficientes datos numericos para el diagrama estadistico.");
+        showEmptyChart("time-series", "No hay suficientes datos numericos para la serie por edad.");
+      }
+
+      const scatter = numericRecords.filter(record => record[CEMENT] !== null && record[STRENGTH] !== null);
+      draw("dispersion", [{
+        x: scatter.map(record => record[CEMENT]),
+        y: scatter.map(record => record[STRENGTH]),
+        type: "scatter",
+        mode: "markers",
+        marker: { color: "#f25f5c", opacity: 0.75, size: 9 },
+        name: "Mezclas"
+      }], {
+        title: "Cemento y resistencia",
+        xaxis: { title: "Cemento (kg/m³)" },
+        yaxis: { title: "Resistencia (Kg/m²)" }
+      });
+
+      const numericColumns = headers.filter(header => numericRecords.some(record => record[header] !== null));
+      const labels = numericColumns.map(column => column.length > 24 ? `${column.slice(0, 21)}...` : column);
+      const matrix = numericColumns.map(columnA => numericColumns.map(columnB => {
+        const paired = numericRecords.filter(record => record[columnA] !== null && record[columnB] !== null);
+        return correlation(paired.map(record => record[columnA]), paired.map(record => record[columnB]));
+      }));
+      if (numericColumns.length > 1) {
+        draw("correlation", [{
+          z: matrix,
+          x: labels,
+          y: labels,
+          type: "heatmap",
+          zmin: -1,
+          zmax: 1,
+          colorscale: "RdBu",
+          reversescale: true,
+          text: matrix.map(row => row.map(value => value === null ? "N/D" : value.toFixed(2))),
+          texttemplate: "%{text}",
+          hovertemplate: "%{x}<br>%{y}<br>Correlacion: %{z:.2f}<extra></extra>"
+        }], {
+          title: "Mapa de calor de correlaciones",
+          margin: { l: 145, r: 25, t: 60, b: 125 },
+          xaxis: { tickangle: -35, automargin: true },
+          yaxis: { automargin: true }
+        });
+      } else {
+        showEmptyChart("correlation", "Se necesitan al menos dos columnas numericas.");
+      }
+
+      const threeD = numericRecords.filter(record => record[AGE] !== null && record[CEMENT] !== null && record[STRENGTH] !== null);
+      draw("chart-3d", [{
+        x: threeD.map(record => record[AGE]),
+        y: threeD.map(record => record[CEMENT]),
+        z: threeD.map(record => record[STRENGTH]),
+        type: "scatter3d",
+        mode: "markers",
+        marker: { size: 5, color: threeD.map(record => record[STRENGTH]), colorscale: "Viridis", showscale: true, opacity: 0.8 },
+        text: threeD.map(record => `Edad: ${record[AGE]} dias<br>Cemento: ${record[CEMENT]} kg/m³<br>Resistencia: ${record[STRENGTH]} Kg/m²`),
+        hovertemplate: "%{text}<extra></extra>"
+      }], {
+        title: "Relacion 3D entre edad, cemento y resistencia",
+        scene: {
+          xaxis: { title: "Edad (dias)" },
+          yaxis: { title: "Cemento (kg/m³)" },
+          zaxis: { title: "Resistencia (Kg/m²)" }
+        },
+        margin: { l: 0, r: 0, t: 60, b: 0 }
+      });
+
+      renderModel(numericRecords);
+      document.getElementById("source-summary").textContent =
+        `Archivo: ${fileName} · Datos procesados localmente en este navegador. La edad es edad del ensayo, no una fecha calendario.`;
+      dashboard.classList.remove("hidden");
+      setStatus(`Dashboard actualizado con ${numberFormat.format(cleaned.length)} filas unicas.`, "success");
+    }
+
+    fileInput.addEventListener("change", async event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      document.getElementById("file-name").textContent = file.name;
+      dashboard.classList.add("hidden");
+      setStatus("Leyendo y procesando el archivo CSV...", "");
+      try {
+        if (!window.Plotly) throw new Error("No se pudo cargar Plotly. Verifica tu conexion a internet y vuelve a abrir la pagina.");
+        const text = await file.text();
+        const { headers, records } = parseCsv(text);
+        const uniqueCount = new Set(records.map(record => JSON.stringify(headers.map(header => record[header] || "")))).size;
+        renderDashboard(headers, records, file.name, records.length, records.length - uniqueCount);
+      } catch (error) {
+        dashboard.classList.add("hidden");
+        setStatus(error instanceof Error ? error.message : "No se pudo procesar el CSV.", "error");
+      }
+    });
+  </script>
+</body>
+</html>
