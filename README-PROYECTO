@@ -1,0 +1,68 @@
+# AVPF-2
+## Título del Proyecto
+
+Dashboard Interactivo para el Análisis Estadístico y la Estimación de la Resistencia a la Compresión del Concreto Permeable
+
+## Objetivo
+Analizar y visualizar las propiedades del concreto permeable mediante herramientas de Data Analytics, utilizando Python para procesar datos, calcular indicadores estadísticos, identificar relaciones entre variables y desarrollar un modelo de regresión lineal múltiple que permita estimar la resistencia a la compresión a partir de la composición de la mezcla y del porcentaje de vacíos.
+
+## Dataset
+Archivo: "Pervious_Concrete_0.csv"
+Fuente: Base de datos proporcionada para el desarrollo del proyecto académico. La URL de la fuente original debe verificarse antes de incorporarla.
+
+Características del dataset:
+- Número de registros originales: 49.
+- Número de variables: 9.
+- Variables principales: composición de la mezcla, porcentaje de vacíos, edad del concreto, resistencia a la compresión y coeficiente de permeabilidad.
+- Edad registrada: 28 días en todas las observaciones.
+
+La base de datos se utiliza para realizar análisis estadísticos descriptivos, visualizar las propiedades del concreto permeable y explorar la estimación de la resistencia a la compresión.
+
+## Tecnologías Utilizadas
+- Python: procesamiento y análisis de datos.
+- Pandas: lectura, limpieza y organización del dataset.
+- NumPy: cálculos estadísticos y construcción del modelo de regresión lineal múltiple.
+- Plotly: elaboración de gráficos interactivos para el dashboard.
+- HTML, CSS y JavaScript: desarrollo de la interfaz del dashboard.
+- Visual Studio Code: entorno de desarrollo y ejecución del código.
+- Git y GitHub: control de versiones y almacenamiento del proyecto.
+
+## KPIs (Indicadores Clave de Desempeño)
+El dashboard presenta indicadores que permiten resumir las características principales de las muestras analizadas:
+
+- Resistencia promedio: media aritmética de los valores de resistencia a la compresión, la cual es 174.49kg/m2.
+- Resistencia máxima: mayor valor de resistencia registrado, la cual es 264 kg/m2.
+- Resistencia mínima: menor valor de resistencia registrado.
+- Edad promedio: promedio de las edades registradas en el dataset, la cual es 28 dias.
+- Número de registros: cantidad de observaciones analizadas, en este caso son 49.
+- Coeficiente de permeabilidad: variable utilizada para explorar las propiedades de permeabilidad del concreto.
+
+Los indicadores se calculan a partir de los datos cargados y permiten obtener una visión general de las propiedades registradas.
+
+## Dashboard
+El dashboard interactivo integra herramientas de visualización y análisis estadístico para facilitar la interpretación de las propiedades del concreto permeable.
+
+Sus principales componentes son:
+1. Indicadores generales: tarjetas con información resumida del dataset.
+2. Análisis estadístico: histogramas, diagramas de caja y medidas descriptivas.
+3. Análisis de relaciones: gráficos de dispersión, mapa de calor de correlaciones y visualizaciones tridimensionales.
+4. Modelo predictivo: regresión lineal múltiple para estimar la resistencia a la compresión a partir de las variables de composición de la mezcla y del porcentaje de vacíos.
+5. Evaluación del modelo: indicadores de error y ajuste, como el error absoluto medio (MAE) y el coeficiente de determinación (R²).
+
+El dashboard constituye una herramienta de apoyo para el análisis exploratorio de datos. Las estimaciones obtenidas no sustituyen los ensayos de laboratorio ni la validación técnica necesaria para aplicaciones de ingeniería.
+
+## Integrantes
+- Manrique Guzmán, Marycielo Nahomi
+- Periche Lindo, Sheila Yadira
+- Quispe Moran, Tracy Guadalupe
+- Torres Chinchay, Jorge Arlet
+
+## Asignatura
+Herramientas de Desarrollo Profesional Civil - 49744
+
+## Docente
+Jiménez Pesantes, Hilder Javier
+
+## Ubicación y año
+
+Piura, Perú — 2026
