@@ -1,16 +1,15 @@
-# AVPF-2
-## Título del Proyecto
+ AVPF-2
 
 Dashboard Interactivo para el Análisis Estadístico y la Estimación de la Resistencia a la Compresión del Concreto Permeable
 
-## Objetivo
+ 1. Objetivo
 Analizar y visualizar las propiedades del concreto permeable mediante herramientas de Data Analytics, utilizando Python para procesar datos, calcular indicadores estadísticos, identificar relaciones entre variables y desarrollar un modelo de regresión lineal múltiple que permita estimar la resistencia a la compresión a partir de la composición de la mezcla y del porcentaje de vacíos.
 
-## Dataset
+ 2. Dataset
 Archivo: "Pervious_Concrete_0.csv"
 Fuente: Base de datos proporcionada para el desarrollo del proyecto académico. La URL de la fuente original debe verificarse antes de incorporarla.
 
-Características del dataset:
+3. Características del dataset:
 - Número de registros originales: 49.
 - Número de variables: 9.
 - Variables principales: composición de la mezcla, porcentaje de vacíos, edad del concreto, resistencia a la compresión y coeficiente de permeabilidad.
@@ -18,7 +17,7 @@ Características del dataset:
 
 La base de datos se utiliza para realizar análisis estadísticos descriptivos, visualizar las propiedades del concreto permeable y explorar la estimación de la resistencia a la compresión.
 
-## Tecnologías Utilizadas
+4. Tecnologías Utilizadas
 - Python: procesamiento y análisis de datos.
 - Pandas: lectura, limpieza y organización del dataset.
 - NumPy: cálculos estadísticos y construcción del modelo de regresión lineal múltiple.
@@ -27,7 +26,7 @@ La base de datos se utiliza para realizar análisis estadísticos descriptivos, 
 - Visual Studio Code: entorno de desarrollo y ejecución del código.
 - Git y GitHub: control de versiones y almacenamiento del proyecto.
 
-## KPIs (Indicadores Clave de Desempeño)
+5. KPIs (Indicadores Clave de Desempeño)
 El dashboard presenta indicadores que permiten resumir las características principales de las muestras analizadas:
 
 - Resistencia promedio: media aritmética de los valores de resistencia a la compresión, la cual es 174.49kg/m2.
@@ -39,7 +38,7 @@ El dashboard presenta indicadores que permiten resumir las características prin
 
 Los indicadores se calculan a partir de los datos cargados y permiten obtener una visión general de las propiedades registradas.
 
-## Dashboard
+6. Dashboard
 El dashboard interactivo integra herramientas de visualización y análisis estadístico para facilitar la interpretación de las propiedades del concreto permeable.
 
 Sus principales componentes son:
@@ -51,16 +50,16 @@ Sus principales componentes son:
 
 El dashboard constituye una herramienta de apoyo para el análisis exploratorio de datos. Las estimaciones obtenidas no sustituyen los ensayos de laboratorio ni la validación técnica necesaria para aplicaciones de ingeniería.
 
-## Integrantes
+7. Integrantes
 - Manrique Guzmán, Marycielo Nahomi
 - Periche Lindo, Sheila Yadira
 - Quispe Moran, Tracy Guadalupe
 - Torres Chinchay, Jorge Arlet
 
-## Asignatura
+8. Asignatura
 Herramientas de Desarrollo Profesional Civil - 49744
 
-## Docente
+9. Docente
 Jiménez Pesantes, Hilder Javier
 
 ## Ubicación y año
