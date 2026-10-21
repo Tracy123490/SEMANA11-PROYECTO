@@ -221,14 +221,25 @@
     }
 
     function draw(id, data, layout) {
-      Plotly.react(id, data, {
+      const chartLayout = {
         autosize: true,
         paper_bgcolor: "#fff",
         plot_bgcolor: "#f3f6fa",
         font: { family: "Arial, sans-serif", color: "#344054" },
         margin: { l: 60, r: 25, t: 62, b: 55 },
         ...layout
-      }, PLOT_CONFIG);
+      };
+      if (chartLayout.title) {
+        chartLayout.title = {
+          text: chartLayout.title,
+          x: 0.03,
+          xanchor: "left",
+          y: 0.98,
+          yanchor: "top",
+          font: { size: 18, color: "#14213d" }
+        };
+      }
+      Plotly.react(id, data, chartLayout, PLOT_CONFIG);
     }
 
     function correlation(a, b) {
